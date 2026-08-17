@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\EnumController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
@@ -23,18 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    Route::prefix('members')->name('members.')->controller(MemberController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::get('/store', 'store')->name('store');
-       
-        Route::get('/{member}/update', 'edit')->name('edit');
-        Route::put('/{member}', 'update')->name('update');
-
-        Route::get('/{member}', 'show')->name('show');
-
-    });
+    Route::resource('members', MemberController::class);
 });
 
 require __DIR__ . '/auth.php';

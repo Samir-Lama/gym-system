@@ -34,7 +34,7 @@ const form = useForm({
 })
 
 const submit = () => {
-    form.post('/members')
+    form.post(route('members.store'))
 }
 </script>
 
@@ -45,10 +45,7 @@ const submit = () => {
 
             <div>
                 <div class="mb-2">
-                    <Link
-                        href="/members"
-                        class="text-sm text-muted-foreground hover:underline"
-                    >
+                    <Link href="/members" class="text-sm text-muted-foreground hover:underline">
                         ← Back to Members
                     </Link>
                 </div>
@@ -62,10 +59,7 @@ const submit = () => {
                 </p>
             </div>
 
-            <form
-                @submit.prevent="submit"
-                class="space-y-6"
-            >
+            <form @submit.prevent="submit" class="space-y-6">
                 <!-- Personal Information -->
 
                 <Card>
@@ -84,16 +78,9 @@ const submit = () => {
                                 First Name
                             </Label>
 
-                            <Input
-                                id="first_name"
-                                v-model="form.first_name"
-                                placeholder="John"
-                            />
+                            <Input id="first_name" v-model="form.first_name" placeholder="John" />
 
-                            <p
-                                v-if="form.errors.first_name"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.first_name" class="text-sm text-red-500">
                                 {{ form.errors.first_name }}
                             </p>
                         </div>
@@ -105,16 +92,9 @@ const submit = () => {
                                 Last Name
                             </Label>
 
-                            <Input
-                                id="last_name"
-                                v-model="form.last_name"
-                                placeholder="Doe"
-                            />
+                            <Input id="last_name" v-model="form.last_name" placeholder="Doe" />
 
-                            <p
-                                v-if="form.errors.last_name"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.last_name" class="text-sm text-red-500">
                                 {{ form.errors.last_name }}
                             </p>
                         </div>
@@ -126,17 +106,9 @@ const submit = () => {
                                 Email
                             </Label>
 
-                            <Input
-                                id="email"
-                                type="email"
-                                v-model="form.email"
-                                placeholder="john@example.com"
-                            />
+                            <Input id="email" type="email" v-model="form.email" placeholder="john@example.com" />
 
-                            <p
-                                v-if="form.errors.email"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.email" class="text-sm text-red-500">
                                 {{ form.errors.email }}
                             </p>
                         </div>
@@ -148,16 +120,9 @@ const submit = () => {
                                 Phone
                             </Label>
 
-                            <Input
-                                id="phone"
-                                v-model="form.phone"
-                                placeholder="+977 98XXXXXXXX"
-                            />
+                            <Input id="phone" v-model="form.phone" placeholder="+977 98XXXXXXXX" />
 
-                            <p
-                                v-if="form.errors.phone"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.phone" class="text-sm text-red-500">
                                 {{ form.errors.phone }}
                             </p>
                         </div>
@@ -169,16 +134,9 @@ const submit = () => {
                                 Date of Birth
                             </Label>
 
-                            <Input
-                                id="date_of_birth"
-                                type="date"
-                                v-model="form.date_of_birth"
-                            />
+                            <Input id="date_of_birth" type="date" v-model="form.date_of_birth" />
 
-                            <p
-                                v-if="form.errors.date_of_birth"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.date_of_birth" class="text-sm text-red-500">
                                 {{ form.errors.date_of_birth }}
                             </p>
                         </div>
@@ -190,11 +148,8 @@ const submit = () => {
                                 Gender
                             </Label>
 
-                            <select
-                                id="gender"
-                                v-model="form.gender"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            >
+                            <select id="gender" v-model="form.gender"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                                 <option value="">
                                     Select gender
                                 </option>
@@ -212,10 +167,7 @@ const submit = () => {
                                 </option>
                             </select>
 
-                            <p
-                                v-if="form.errors.gender"
-                                class="text-sm text-red-500"
-                            >
+                            <p v-if="form.errors.gender" class="text-sm text-red-500">
                                 {{ form.errors.gender }}
                             </p>
                         </div>
@@ -238,11 +190,7 @@ const submit = () => {
                                 Street
                             </Label>
 
-                            <Input
-                                id="street"
-                                v-model="form.street"
-                                placeholder="Street address"
-                            />
+                            <Input id="street" v-model="form.street" placeholder="Street address" />
                         </div>
 
                         <div class="space-y-2">
@@ -250,11 +198,7 @@ const submit = () => {
                                 City
                             </Label>
 
-                            <Input
-                                id="city"
-                                v-model="form.city"
-                                placeholder="Kathmandu"
-                            />
+                            <Input id="city" v-model="form.city" placeholder="Kathmandu" />
                         </div>
 
                         <div class="space-y-2">
@@ -262,11 +206,7 @@ const submit = () => {
                                 State / Province
                             </Label>
 
-                            <Input
-                                id="state"
-                                v-model="form.state"
-                                placeholder="Bagmati"
-                            />
+                            <Input id="state" v-model="form.state" placeholder="Bagmati" />
                         </div>
 
                         <div class="space-y-2">
@@ -274,11 +214,7 @@ const submit = () => {
                                 Country
                             </Label>
 
-                            <Input
-                                id="country"
-                                v-model="form.country"
-                                placeholder="Nepal"
-                            />
+                            <Input id="country" v-model="form.country" placeholder="Nepal" />
                         </div>
 
                         <div class="space-y-2">
@@ -286,11 +222,7 @@ const submit = () => {
                                 Postal Code
                             </Label>
 
-                            <Input
-                                id="postal_code"
-                                v-model="form.postal_code"
-                                placeholder="44600"
-                            />
+                            <Input id="postal_code" v-model="form.postal_code" placeholder="44600" />
                         </div>
                     </CardContent>
                 </Card>
@@ -311,11 +243,8 @@ const submit = () => {
                                 Name
                             </Label>
 
-                            <Input
-                                id="emergency_contact_name"
-                                v-model="form.emergency_contact_name"
-                                placeholder="Jane Doe"
-                            />
+                            <Input id="emergency_contact_name" v-model="form.emergency_contact_name"
+                                placeholder="Jane Doe" />
                         </div>
 
                         <div class="space-y-2">
@@ -323,11 +252,8 @@ const submit = () => {
                                 Phone
                             </Label>
 
-                            <Input
-                                id="emergency_contact_phone"
-                                v-model="form.emergency_contact_phone"
-                                placeholder="+977 98XXXXXXXX"
-                            />
+                            <Input id="emergency_contact_phone" v-model="form.emergency_contact_phone"
+                                placeholder="+977 98XXXXXXXX" />
                         </div>
 
                         <div class="space-y-2">
@@ -335,11 +261,8 @@ const submit = () => {
                                 Relationship
                             </Label>
 
-                            <Input
-                                id="emergency_relationship"
-                                v-model="form.emergency_relationship"
-                                placeholder="Parent"
-                            />
+                            <Input id="emergency_relationship" v-model="form.emergency_relationship"
+                                placeholder="Parent" />
                         </div>
                     </CardContent>
                 </Card>
@@ -354,12 +277,8 @@ const submit = () => {
                     </CardHeader>
 
                     <CardContent>
-                        <textarea
-                            v-model="form.notes"
-                            rows="4"
-                            placeholder="Additional notes..."
-                            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        />
+                        <textarea v-model="form.notes" rows="4" placeholder="Additional notes..."
+                            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
                     </CardContent>
                 </Card>
 
@@ -367,18 +286,12 @@ const submit = () => {
 
                 <div class="flex justify-end gap-3">
                     <Link href="/members">
-                        <Button
-                            type="button"
-                            variant="outline"
-                        >
+                        <Button type="button" variant="outline">
                             Cancel
                         </Button>
                     </Link>
 
-                    <Button
-                        type="submit"
-                        :disabled="form.processing"
-                    >
+                    <Button type="submit" :disabled="form.processing">
                         {{
                             form.processing
                                 ? 'Creating...'

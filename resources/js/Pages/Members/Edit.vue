@@ -11,6 +11,7 @@ import {
 } from '@/Components/ui/card'
 import { Input } from '@/Components/ui/input'
 import { Label } from '@/Components/ui/label'
+import { ref, onMounted } from 'vue'
 
 interface Member {
     id: number
@@ -32,7 +33,14 @@ interface Member {
     emergency_relationship: string | null
 
     notes: string | null
+    status: string
 }
+
+interface StatusOption {
+    value: string
+    label: string
+}
+const statusOptions = ref<StatusOption[]>([])
 
 const props = defineProps<{
     member: Member
@@ -59,8 +67,13 @@ const form = useForm({
     emergency_relationship: props.member.emergency_relationship ?? '',
 
     notes: props.member.notes ?? '',
+    status: props.member.status ?? '',
 })
+onMounted(async () => {
+    const response = await fetch('/api/enums/member-statuses')
 
+    statusOptions.value = await response.json()
+})
 const submit = () => {
     form.put(route('members.update', props.member.id))
 }
@@ -185,6 +198,26 @@ const submit = () => {
 
                             <p v-if="form.errors.gender" class="text-sm text-red-500">
                                 {{ form.errors.gender }}
+                            </p>
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="status">
+                                Status
+                            </Label>
+
+                            <select id="status" v-model="form.status"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                <option value="" disabled>
+                                    Select status
+                                </option>
+
+                                <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+
+                            <p v-if="form.errors.status" class="text-sm text-red-500">
+                                {{ form.errors.status }}
                             </p>
                         </div>
 

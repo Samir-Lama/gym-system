@@ -31,9 +31,8 @@ interface Member {
     emergency_relationship: string | null
 
     joined_at: string
-    status: string
-
     notes: string | null
+    status: string | null
 }
 
 defineProps<{
@@ -57,7 +56,8 @@ defineProps<{
                             {{ member.first_name }} {{ member.last_name }}
                         </h1>
 
-                        <span class="rounded-full px-3 py-1 text-xs font-medium" :class="statusClasses(member.status)">
+                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium"
+                            :class="statusClasses(member.status)">
                             {{ formatStatus(member.status) }}
                         </span>
                     </div>

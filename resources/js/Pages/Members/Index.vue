@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import { Link } from "@inertiajs/vue3";
+import {
+    formatDate,
+    formatStatus,
+    statusClasses,
+} from '@/Services/formatters'
 
 interface Member {
     id: number;
@@ -9,6 +14,7 @@ interface Member {
     email: string;
     phone?: string | null;
     created_at: string;
+    status: string;
 }
 
 interface PaginationLink {
@@ -72,6 +78,10 @@ defineProps<{
                                 </th>
 
                                 <th class="px-6 py-4 font-semibold text-slate-700">
+                                    Status
+                                </th>
+
+                                <th class="px-6 py-4 font-semibold text-slate-700">
                                     Joined
                                 </th>
 
@@ -98,6 +108,14 @@ defineProps<{
                                     {{ member.phone || "-" }}
                                 </td>
 
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium"
+                                        :class="statusClasses(member.status)">
+                                        {{ formatStatus(member.status) }}
+                                    </span>
+                                </td>
+
                                 <td class="px-6 py-4 text-slate-600">
                                     {{ new Date(member.created_at).toLocaleDateString() }}
                                 </td>
@@ -111,7 +129,7 @@ defineProps<{
 
                             <!-- Empty state -->
                             <tr v-if="members.data.length === 0">
-                                <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                                <td colspan="6" class="px-6 py-12 text-center text-slate-500">
                                     No members found.
                                 </td>
                             </tr>

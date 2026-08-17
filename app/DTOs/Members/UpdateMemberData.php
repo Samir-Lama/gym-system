@@ -4,9 +4,9 @@ namespace App\DTOs\Members;
 
 use App\Enums\Gender;
 use App\Enums\MemberStatus;
-use App\Http\Requests\Members\StoreMemberRequest;
+use App\Http\Requests\Members\UpdateMemberRequest;
 
-readonly class CreateMemberData
+readonly class UpdateMemberData
 {
     public function __construct(
         public string $firstName,
@@ -27,17 +27,12 @@ readonly class CreateMemberData
         public ?string $emergencyContactPhone,
         public ?string $emergencyRelationship,
 
-        public ?string $photo,
-        public ?string $waiverFile,
-        public ?string $medicalFile,
-
-        public string $joinedAt,
+        public MemberStatus $status,
         public ?string $notes,
-        // public MemberStatus $status,
     ) {}
 
-    public static function  formRequest(
-        StoreMemberRequest $request
+    public static function formRequest(
+        UpdateMemberRequest $request
     ): self {
         return new self(
             firstName: $request->string('first_name')->value(),
@@ -58,22 +53,21 @@ readonly class CreateMemberData
             country: $request->input('country'),
             postalCode: $request->input('postal_code'),
 
-            emergencyContactName: $request->input('emergency_contact_name'),
+            emergencyContactName: $request->input(
+                'emergency_contact_name'
+            ),
+            emergencyContactPhone: $request->input(
+                'emergency_contact_phone'
+            ),
+            emergencyRelationship: $request->input(
+                'emergency_relationship'
+            ),
 
-            emergencyContactPhone: $request->input('emergency_contact_phone'),
-
-            emergencyRelationship: $request->input('emergency_relationship'),
-
-            photo: null,
-            waiverFile: null,
-            medicalFile: null,
-
-            joinedAt: now()->toDateString(),
+            status: MemberStatus::from(
+                $request->string('status')->value()
+            ),
 
             notes: $request->input('notes'),
-            // status: MemberStatus::from(
-            //     $request->string('status')->value()
-            // ),
         );
     }
 }

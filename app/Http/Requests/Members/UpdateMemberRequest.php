@@ -3,11 +3,12 @@
 namespace App\Http\Requests\Members;
 
 use App\Enums\Gender;
+use App\Enums\MemberStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreMemberRequest extends FormRequest
+class UpdateMemberRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -32,7 +33,7 @@ class StoreMemberRequest extends FormRequest
                 'required',
                 'email',
                 'max:255',
-                'unique:members,email',
+                Rule::unique('members', 'email')->ignore($this->member),
             ],
 
             'phone' => ['nullable', 'string', 'max:30'],
@@ -46,6 +47,10 @@ class StoreMemberRequest extends FormRequest
             'gender' => [
                 'nullable',
                 Rule::enum(Gender::class),
+            ],
+            'status' => [
+                'required',
+                Rule::enum(MemberStatus::class),
             ],
 
             'street' => ['nullable', 'string', 'max:255'],

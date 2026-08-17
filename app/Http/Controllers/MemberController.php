@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Contracts\Services\MemberServiceInterface;
 use App\DTOs\Members\CreateMemberData;
+use App\DTOs\Members\UpdateMemberData;
 use App\Http\Requests\Members\StoreMemberRequest;
+use App\Http\Requests\Members\UpdateMemberRequest;
 use App\Models\Member;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -42,7 +44,12 @@ class MemberController extends Controller
     public function show(Member $member): Response
     {
         return Inertia::render('Members/Show', [
-            'member' => $member,
+            'member' => [
+                ...$member->toArray(),
+                'status' => $member->status?->value,
+                'status_label' => $member->status?->label(),
+                'status_color' => $member->status?->color(),
+            ]
         ]);
     }
 
@@ -54,10 +61,10 @@ class MemberController extends Controller
     }
 
     public function update(
-        StoreMemberRequest $request,
+        UpdateMemberRequest $request,
         Member $member
     ): RedirectResponse {
-        $data = CreateMemberData::formRequest($request);
+        $data = UpdateMemberData::formRequest($request);
 
         $this->memberService->update($member, $data);
 

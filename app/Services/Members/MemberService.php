@@ -5,6 +5,7 @@ namespace App\Services\Members;
 use App\Contracts\Repositories\MemberRepositoryInterface;
 use App\Contracts\Services\MemberServiceInterface;
 use App\DTOs\Members\CreateMemberData;
+use App\DTOs\Members\UpdateMemberData;
 use App\Enums\MemberStatus;
 use App\Models\Member;
 use Override;
@@ -59,8 +60,7 @@ class MemberService implements MemberServiceInterface
         return $number;
     }
 
-    #[Override]
-    public function update(Member $member, CreateMemberData $data): Member
+    public function update(Member $member, UpdateMemberData $data): Member
     {
         $member->update([
             'first_name' => $data->firstName,
@@ -81,6 +81,7 @@ class MemberService implements MemberServiceInterface
             'emergency_relationship' => $data->emergencyRelationship,
 
             'notes' => $data->notes,
+            'status' => $data->status,
         ]);
 
         return $member->refresh();

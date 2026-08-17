@@ -3,11 +3,12 @@
 namespace App\Contracts\Services;
 
 use App\DTOs\Members\CreateMemberData;
+use App\DTOs\Members\UpdateMemberData;
 use App\Models\Member;
 
 interface MemberServiceInterface
 {
     public function create(CreateMemberData $data): Member;
 
-    public function update(Member $member, CreateMemberData $data): Member;
+    public function update(Member $member, UpdateMemberData $data): Member;
 }
