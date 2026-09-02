@@ -2,6 +2,7 @@
 
 namespace App\Contracts\Repositories;
 
+use App\Enums\MemberStatus;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -15,8 +16,11 @@ interface MemberRepositoryInterface
 
     public function find(int $id): ?Member;
 
-    public function paginate(int $perPage = 15): LengthAwarePaginator;
+    public function paginate(
+        int $perPage = 15,
+        ?string $search = null,
+        ?MemberStatus $status = null,
+    ): LengthAwarePaginator;
 
     public function existsByMembershipNumber(string $membershipNumber): bool;
-
 }

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import { Link } from "@inertiajs/vue3";
+import { Link, router } from "@inertiajs/vue3";
+import Button from "@/Components/ui/button/Button.vue";
+import { Input } from "@/Components/ui/input";
 import {
     formatDate,
     formatStatus,
     statusClasses,
-} from '@/Services/formatters'
+} from "@/Services/formatters";
+import { onMounted, ref, watch } from "vue";
+import { useEnumOptions } from "@/Composables/useEnumOptions";
 
 interface Member {
     id: number;
@@ -31,9 +35,64 @@ interface MembersPagination {
     links: PaginationLink[];
 }
 
-defineProps<{
+interface Filters {
+    search: string;
+    status: string | null;
+}
+
+const props = defineProps<{
     members: MembersPagination;
+    filters: Filters;
 }>();
+
+const search = ref(props.filters.search ?? "");
+const status = ref(props.filters.status ?? "");
+
+const {
+    options: statuses,
+    loading: statusesLoading,
+    fetchOptions: fetchStatuses,
+} = useEnumOptions();
+
+onMounted(() => {
+    fetchStatuses("/api/enums/member-statuses");
+});
+
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+watch(search, (value) => {
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+
+    searchTimeout = setTimeout(() => {
+        applyFilters();
+    }, 300);
+});
+
+watch(status, () => {
+    applyFilters();
+});
+
+const applyFilters = () => {
+    router.get(
+        route("members.index"),
+        {
+            search: search.value || undefined,
+            status: status.value || undefined,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        }
+    );
+};
+
+const clearFilters = () => {
+    search.value = "";
+    status.value = "";
+};
 </script>
 
 <template>
@@ -55,6 +114,37 @@ defineProps<{
                     class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
                     Add Member
                 </Link>
+            </div>
+
+            <!-- Filters -->
+            <div class="rounded-xl border bg-white p-4 shadow-sm">
+                <div class="grid gap-4 md:grid-cols-[1fr_220px_auto]">
+
+                    <!-- Search -->
+                    <div>
+                        <Input v-model="search" type="search" placeholder="Search members..." />
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <select v-model="status" :disabled="statusesLoading"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                            <option value="">
+                                All statuses
+                            </option>
+
+                            <option v-for="option in statuses" :key="option.value" :value="option.value">
+                                {{ option.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Clear -->
+                    <Button type="button" variant="outline" @click="clearFilters" :disabled="!search && !status">
+                        Clear
+                    </Button>
+
+                </div>
             </div>
 
             <!-- Members Table -->
@@ -117,7 +207,8 @@ defineProps<{
                                 </td>
 
                                 <td class="px-6 py-4 text-slate-600">
-                                    {{ new Date(member.created_at).toLocaleDateString() }}
+                                    <!-- {{ new Date(member.created_at).toLocaleDateString() }} -->
+                                    {{ formatDate(member.created_at) }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <Link :href="route('members.show', member.id)"

@@ -8,6 +8,7 @@ use App\DTOs\Members\CreateMemberData;
 use App\DTOs\Members\UpdateMemberData;
 use App\Enums\MemberStatus;
 use App\Models\Member;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Override;
 
 class MemberService implements MemberServiceInterface
@@ -85,5 +86,17 @@ class MemberService implements MemberServiceInterface
         ]);
 
         return $member->refresh();
+    }
+
+    public function paginate(
+        int $perPage = 15,
+        ?string $search = null,
+        ?MemberStatus $status = null,
+    ): LengthAwarePaginator {
+        return $this->memberRepository->paginate(
+            $perPage,
+            $search,
+            $status
+        );
     }
 }

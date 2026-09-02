@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Contracts\Services\MemberServiceInterface;
 use App\DTOs\Members\CreateMemberData;
 use App\DTOs\Members\UpdateMemberData;
+use App\Enums\MemberStatus;
 use App\Http\Requests\Members\StoreMemberRequest;
 use App\Http\Requests\Members\UpdateMemberRequest;
 use App\Models\Member;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,11 +20,28 @@ class MemberController extends Controller
         private readonly MemberServiceInterface $memberService
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $members = Member::latest()->paginate(10);
+        $search = $request->string('search')->value() ?: null;
+
+        $statusValue = $request->string('status')->value() ?: null;
+
+        $status = $statusValue
+            ? MemberStatus::tryFrom($statusValue)
+            : null;
+
+        $members = $this->memberService->paginate(
+            10,
+            $search,
+            $status,
+        );
+
         return Inertia::render('Members/Index', [
-            'members' => $members
+            'members' => $members,
+            'filters' => [
+                'search' => $search,
+                'status' => $status?->value,
+            ],
         ]);
     }
 
