@@ -34,6 +34,8 @@ class MemberRepository implements MemberRepositoryInterface
         int $perPage = 15,
         ?string $search = null,
         ?MemberStatus $status = null,
+        string $sort = 'created_at',
+        string $direction = 'desc',
     ): LengthAwarePaginator {
         return Member::query()->when($search, function ($query) use ($search) {
             $query->where(function ($query) use ($search) {
@@ -46,7 +48,7 @@ class MemberRepository implements MemberRepositoryInterface
         })->when($status, function ($query) use ($status) {
             $query->where('status', $status);
         })
-            ->latest()
+            ->orderBy($sort, $direction)
             ->paginate($perPage)
             ->withQueryString();
     }
@@ -54,5 +56,16 @@ class MemberRepository implements MemberRepositoryInterface
     public function existsByMembershipNumber(string $membershipNumber): bool
     {
         return Member::query()->where('membership_number', $membershipNumber)->exists();
+    }
+
+    public function updateStatusByIds(
+        array $ids,
+        MemberStatus $status
+    ): int {
+        return Member::query()->whereIn('id', $ids)->update(['status' => $status]);
+    }
+
+    public function deleteByIds(array $ids): int {
+        return Member::query()->whereIn('id', $ids)->delete();
     }
 }

@@ -18,5 +18,16 @@ interface MemberServiceInterface
         int $perPage = 15,
         ?string $search = null,
         ?MemberStatus $status = null,
+        string $sort = 'created_at',
+        string $direction = 'desc',
     ): LengthAwarePaginator;
+
+    public function delete(Member $member): void;
+
+    public function bulkUpdateStatus(
+        array $ids,
+        MemberStatus $status
+    ): int;
+
+    public function bulkDelete(array $ids): int;
 }

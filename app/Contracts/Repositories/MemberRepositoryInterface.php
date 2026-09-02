@@ -20,7 +20,16 @@ interface MemberRepositoryInterface
         int $perPage = 15,
         ?string $search = null,
         ?MemberStatus $status = null,
+        string $sort = 'created_at',
+        string $direction = 'desc',
     ): LengthAwarePaginator;
 
     public function existsByMembershipNumber(string $membershipNumber): bool;
+
+    public function updateStatusByIds(
+        array $ids,
+        MemberStatus $status
+    ): int;
+
+    public function deleteByIds(array $ids): int;
 }
