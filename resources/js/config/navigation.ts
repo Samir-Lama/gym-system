@@ -31,8 +31,8 @@ export const navigation: NavigationItem[] = [
     },
     {
         title: 'Check-ins',
-        href: 'check-ins.index',
-        active: ['check-ins.*'],
+        href: 'checkins.index',
+        active: ['checkins.*'],
         icon: Activity,
         roles: ['Admin', 'Staff'],
     },

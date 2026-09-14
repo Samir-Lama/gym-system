@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\Repositories\MemberRepositoryInterface;
 use App\Contracts\Repositories\MembershipPlanRepositoryInterface;
 use App\Contracts\Services\CheckInServiceInterface;
+use App\Contracts\Services\MemberAccessCredentialServiceInterface;
 use App\Contracts\Services\MemberMembershipServiceInterface;
 use App\Contracts\Services\MemberServiceInterface;
 use App\Contracts\Services\MembershipPlanServiceInterface;
@@ -12,6 +13,7 @@ use App\Contracts\Services\PaymentServiceInterface;
 use App\Repositories\MemberRepository;
 use App\Repositories\MembershipPlanRepository;
 use App\Services\CheckIns\CheckInService;
+use App\Services\MemberAccessCredentials\MemberAccessCredentialService;
 use App\Services\MemberMemberships\MemberMembershipService;
 use App\Services\Members\MemberService;
 use App\Services\MembershipPlans\MembershipPlanService;
@@ -29,6 +31,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             CheckInServiceInterface::class,
             CheckInService::class
+        );
+
+        $this->app->bind(
+            MemberAccessCredentialServiceInterface::class,
+            MemberAccessCredentialService::class
         );
 
         $this->app->bind(

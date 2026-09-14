@@ -4,8 +4,8 @@ import { Input } from '@/Components/ui/input'
 import { Textarea } from '@/Components/ui/textarea'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { Link, router, useForm } from '@inertiajs/vue3'
-import { Clock3, LogIn, LogOut, Search, UserRound } from 'lucide-vue-next'
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { Clock3, LogIn, Search, UserRound } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 interface MethodOption {
     value: string
@@ -28,6 +28,7 @@ interface SearchMember {
     last_name: string
     email: string
     phone: string | null
+    status: string
     memberships: ActiveMembership[]
 }
 
@@ -90,6 +91,29 @@ const form = useForm({
     notes: '',
 })
 
+const credentialForm = useForm({
+    credential: '',
+    type: 'qr',
+})
+
+const credentialError = computed(() =>
+    credentialForm.errors.credential
+    || credentialForm.errors.type
+    || (credentialForm.errors as Record<string, string>).member_id
+)
+
+const submitCredential = () => {
+    if (!credentialForm.credential.trim()) {
+        return
+    }
+
+    credentialForm.credential = credentialForm.credential.trim()
+    credentialForm.post(route('checkins.credential'), {
+        preserveScroll: true,
+        onSuccess: () => credentialForm.reset('credential'),
+    })
+}
+
 const memberSearch = ref('')
 const memberResults = ref<SearchMember[]>([])
 const selectedMember = ref<SearchMember | null>(null)
@@ -127,7 +151,7 @@ watch(memberSearch, (value) => {
 
         try {
             const response = await fetch(
-                `/api/members/search?search=${encodeURIComponent(query)}`
+                route('checkins.member-search', { search: query })
             )
 
             if (!response.ok) {
@@ -171,7 +195,7 @@ const clearMember = () => {
 }
 
 const submitCheckIn = () => {
-    form.post(route('check-ins.store'), {
+    form.post(route('checkins.store'), {
         preserveScroll: true,
         onSuccess: () => {
             form.reset()
@@ -193,7 +217,7 @@ const applyFilters = () => {
     clearTimeout(filterTimeout)
     filterErrors.value = {}
 
-    router.get(route('check-ins.index'), {
+    router.get(route('checkins.index'), {
         search: historySearch.value.trim() || undefined,
         presence: presence.value || undefined,
         method: method.value || undefined,
@@ -224,7 +248,7 @@ const clearFilters = () => {
 const checkOut = (checkIn: CheckInRecord) => {
     checkoutError.value = ''
 
-    router.patch(route('check-ins.checkout', checkIn.id), {}, {
+    router.patch(route('checkins.checkout', checkIn.id), {}, {
         preserveScroll: true,
         onError: (errors) => {
             checkoutError.value = errors.check_in ?? 'Unable to check out this member.'
@@ -234,21 +258,24 @@ const checkOut = (checkIn: CheckInRecord) => {
 
 const formatDateTime = (value: string | null) => {
     if (!value) {
-        return 'Still inside'
+        return '—'
     }
 
-    return new Intl.DateTimeFormat('en-GB', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
+    return new Intl.DateTimeFormat('en-NP', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     }).format(new Date(value))
 }
 
-const formatDuration = (checkIn: CheckInRecord) => {
+const calculateDuration = (checkIn: CheckInRecord) => {
     if (!checkIn.check_out_at) {
         return 'In progress'
     }
 
-    const minutes = Math.max(0, Math.round(
+    const minutes = Math.max(0, Math.floor(
         (new Date(checkIn.check_out_at).getTime() - new Date(checkIn.check_in_at).getTime()) / 60000
     ))
     const hours = Math.floor(minutes / 60)
@@ -267,25 +294,68 @@ onBeforeUnmount(() => {
     <AdminLayout>
         <div class="space-y-6">
             <div>
-                <h1 class="text-2xl font-semibold text-slate-900">Check-ins</h1>
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Check-ins</h1>
                 <p class="mt-1 text-sm text-slate-500">
                     Record arrivals and departures while keeping a complete visit history.
                 </p>
             </div>
 
-            <div class="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
-                <section class="h-fit rounded-xl border bg-white shadow-sm">
-                    <div class="border-b px-6 py-4">
+            <div class="grid items-start gap-6 xl:grid-cols-[380px_1fr]">
+                <section class="rounded-xl border bg-white shadow-sm">
+                    <div class="border-b px-5 py-4">
                         <div class="flex items-center gap-2">
-                            <LogIn class="h-5 w-5 text-emerald-600" />
-                            <h2 class="font-semibold text-slate-900">Manual Check-in</h2>
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                                <LogIn class="h-4 w-4" />
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-semibold text-slate-900">Manual Check-in</h2>
+                                <p class="text-xs text-slate-500">Find a member and record their arrival.</p>
+                            </div>
                         </div>
-                        <p class="mt-1 text-sm text-slate-500">Find a member and record their arrival.</p>
                     </div>
 
-                    <form class="space-y-5 p-6" @submit.prevent="submitCheckIn">
-                        <div class="relative space-y-2">
-                            <label for="member-search" class="text-sm font-medium">Member</label>
+                    <form class="space-y-3 border-b bg-emerald-50/40 p-5" @submit.prevent="submitCredential">
+                        <div class="space-y-1.5">
+                            <label for="credential-scan" class="text-sm font-medium text-slate-700">
+                                Scan Credential
+                            </label>
+                            <div class="grid grid-cols-[1fr_6rem] gap-2">
+                                <Input
+                                    id="credential-scan"
+                                    v-model="credentialForm.credential"
+                                    autocomplete="off"
+                                    autofocus
+                                    placeholder="Scan QR or card..."
+                                />
+                                <select
+                                    v-model="credentialForm.type"
+                                    aria-label="Credential type"
+                                    class="h-10 rounded-md border border-input bg-white px-2 text-sm"
+                                >
+                                    <option value="qr">QR</option>
+                                    <option value="rfid">RFID</option>
+                                </select>
+                            </div>
+                            <p class="text-xs text-slate-500">
+                                USB scanners can enter the code and submit automatically.
+                            </p>
+                            <p v-if="credentialError" class="text-sm text-red-600">
+                                {{ credentialError }}
+                            </p>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            class="w-full"
+                            :disabled="credentialForm.processing || !credentialForm.credential.trim()"
+                        >
+                            {{ credentialForm.processing ? 'Checking in...' : 'Scan Credential' }}
+                        </Button>
+                    </form>
+
+                    <form class="space-y-4 p-5" @submit.prevent="submitCheckIn">
+                        <div class="relative space-y-1.5">
+                            <label for="member-search" class="text-sm font-medium text-slate-700">Member</label>
                             <div class="relative">
                                 <Search class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                 <Input
@@ -338,6 +408,9 @@ onBeforeUnmount(() => {
                                             {{ selectedMember.memberships[0].plan.name }} · expires
                                             {{ formatDateTime(selectedMember.memberships[0].end_date) }}
                                         </p>
+                                        <p v-else class="mt-2 text-xs font-medium text-amber-700">
+                                            No valid active membership.
+                                        </p>
                                     </div>
                                 </div>
                                 <button type="button" class="text-xs text-slate-500 hover:text-slate-900" @click="clearMember">
@@ -346,12 +419,12 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="check-in-method" class="text-sm font-medium">Method</label>
+                        <div class="space-y-1.5">
+                            <label for="check-in-method" class="text-sm font-medium text-slate-700">Method</label>
                             <select
                                 id="check-in-method"
                                 v-model="form.method"
-                                class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                             >
                                 <option v-for="option in methods" :key="option.value" :value="option.value">
                                     {{ option.label }}
@@ -360,42 +433,50 @@ onBeforeUnmount(() => {
                             <p v-if="form.errors.method" class="text-sm text-red-600">{{ form.errors.method }}</p>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="check-in-device" class="text-sm font-medium">Device ID</label>
+                        <div class="space-y-1.5">
+                            <label for="check-in-device" class="text-sm font-medium text-slate-700">Device ID</label>
                             <Input id="check-in-device" v-model="form.device_id" placeholder="Optional terminal or reader ID" />
                             <p v-if="form.errors.device_id" class="text-sm text-red-600">{{ form.errors.device_id }}</p>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="check-in-notes" class="text-sm font-medium">Notes</label>
-                            <Textarea id="check-in-notes" v-model="form.notes" placeholder="Optional visit notes" />
+                        <div class="space-y-1.5">
+                            <label for="check-in-notes" class="text-sm font-medium text-slate-700">Notes</label>
+                            <Textarea id="check-in-notes" v-model="form.notes" rows="3" placeholder="Optional visit notes" />
                             <p v-if="form.errors.notes" class="text-sm text-red-600">{{ form.errors.notes }}</p>
                         </div>
 
-                        <Button type="submit" class="w-full" :disabled="form.processing || !form.member_id">
+                        <Button
+                            type="submit"
+                            class="w-full"
+                            :disabled="form.processing || !selectedMember || selectedMember.status !== 'active' || !selectedMember.memberships.length"
+                        >
                             {{ form.processing ? 'Checking in...' : 'Check In Member' }}
                         </Button>
                     </form>
                 </section>
 
-                <section class="min-w-0 rounded-xl border bg-white shadow-sm">
-                    <div class="border-b px-6 py-4">
-                        <div class="flex items-center gap-2">
-                            <Clock3 class="h-5 w-5 text-slate-600" />
-                            <h2 class="font-semibold text-slate-900">Visit History</h2>
+                <section class="min-w-0 overflow-hidden rounded-xl border bg-white shadow-sm">
+                    <div class="border-b px-5 py-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <Clock3 class="h-4 w-4 text-slate-500" />
+                                <div>
+                                    <h2 class="text-sm font-semibold text-slate-900">Visit History</h2>
+                                    <p class="text-xs text-slate-500">{{ checkIns.total }} recorded visits</p>
+                                </div>
+                            </div>
                         </div>
-                        <p class="mt-1 text-sm text-slate-500">{{ checkIns.total }} recorded visits</p>
                     </div>
 
-                    <div class="space-y-3 border-b p-4">
+                    <div class="border-b bg-slate-50/50 p-4">
                         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                             <Input v-model="historySearch" type="search" placeholder="Search member..." />
-                            <select v-model="presence" class="h-9 rounded-md border border-input bg-background px-3 text-sm" @change="applyFilters">
+                            <select v-model="presence" class="h-10 rounded-md border border-input bg-white px-3 text-sm" @change="applyFilters">
                                 <option value="">All visits</option>
                                 <option value="open">Currently inside</option>
                                 <option value="closed">Completed</option>
                             </select>
-                            <select v-model="method" class="h-9 rounded-md border border-input bg-background px-3 text-sm" @change="applyFilters">
+                            <select v-model="method" class="h-10 rounded-md border border-input bg-white px-3 text-sm" @change="applyFilters">
                                 <option value="">All methods</option>
                                 <option v-for="option in methods" :key="option.value" :value="option.value">
                                     {{ option.label }}
@@ -404,18 +485,18 @@ onBeforeUnmount(() => {
                             <Input v-model="fromDate" type="date" aria-label="From date" @change="applyFilters" />
                             <Input v-model="toDate" type="date" aria-label="To date" @change="applyFilters" />
                         </div>
-                        <div class="flex items-start justify-between gap-3">
+                        <div class="mt-3 flex items-start justify-between gap-3">
                             <div class="text-sm text-red-600">
                                 <p v-for="(error, field) in filterErrors" :key="field">{{ error }}</p>
                                 <p v-if="checkoutError">{{ checkoutError }}</p>
                             </div>
-                            <Button type="button" variant="outline" @click="clearFilters">Clear Filters</Button>
+                            <Button type="button" variant="outline" size="sm" @click="clearFilters">Clear Filters</Button>
                         </div>
                     </div>
 
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
-                            <thead class="border-b bg-slate-50 text-left text-slate-600">
+                            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                                 <tr>
                                     <th class="px-5 py-3 font-medium">Member</th>
                                     <th class="px-5 py-3 font-medium">Plan</th>
@@ -426,19 +507,23 @@ onBeforeUnmount(() => {
                                     <th class="px-5 py-3 font-medium text-right">Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr v-for="checkIn in checkIns.data" :key="checkIn.id" class="border-b last:border-0">
+                            <tbody class="divide-y">
+                                <tr v-for="checkIn in checkIns.data" :key="checkIn.id" class="transition-colors hover:bg-slate-50/60">
                                     <td class="px-5 py-4">
                                         <p class="font-medium text-slate-900">
                                             {{ checkIn.member.first_name }} {{ checkIn.member.last_name }}
                                         </p>
-                                        <p class="text-xs text-slate-500">{{ checkIn.member.membership_number }}</p>
+                                        <p class="mt-0.5 text-xs text-slate-500">{{ checkIn.member.membership_number }}</p>
                                     </td>
-                                    <td class="px-5 py-4 text-slate-600">{{ checkIn.membership?.plan.name ?? 'Historical' }}</td>
-                                    <td class="px-5 py-4 capitalize">{{ checkIn.method }}</td>
-                                    <td class="whitespace-nowrap px-5 py-4">{{ formatDateTime(checkIn.check_in_at) }}</td>
-                                    <td class="whitespace-nowrap px-5 py-4">{{ formatDateTime(checkIn.check_out_at) }}</td>
-                                    <td class="whitespace-nowrap px-5 py-4">{{ formatDuration(checkIn) }}</td>
+                                    <td class="px-5 py-4 text-slate-600">{{ checkIn.membership?.plan.name ?? '—' }}</td>
+                                    <td class="px-5 py-4">
+                                        <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">
+                                            {{ checkIn.method }}
+                                        </span>
+                                    </td>
+                                    <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ formatDateTime(checkIn.check_in_at) }}</td>
+                                    <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ formatDateTime(checkIn.check_out_at) }}</td>
+                                    <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ calculateDuration(checkIn) }}</td>
                                     <td class="px-5 py-4 text-right">
                                         <Button
                                             v-if="!checkIn.check_out_at"
@@ -447,10 +532,9 @@ onBeforeUnmount(() => {
                                             size="sm"
                                             @click="checkOut(checkIn)"
                                         >
-                                            <LogOut class="mr-2 h-4 w-4" />
                                             Check Out
                                         </Button>
-                                        <span v-else class="text-xs font-medium text-emerald-700">Completed</span>
+                                        <span v-else class="text-xs font-medium text-emerald-600">Completed</span>
                                     </td>
                                 </tr>
                                 <tr v-if="!checkIns.data.length">

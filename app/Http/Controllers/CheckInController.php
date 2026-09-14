@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\Repositories\MemberRepositoryInterface;
 use App\Contracts\Services\CheckInServiceInterface;
+use App\Contracts\Services\MemberAccessCredentialServiceInterface;
 use App\DTOs\CheckIns\CreateCheckInData;
+use App\Enums\AccessCredentialType;
 use App\Enums\CheckInMethod;
 use App\Http\Requests\CheckIns\StoreCheckInRequest;
 use App\Models\CheckIn;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +20,9 @@ use Inertia\Response;
 class CheckInController extends Controller
 {
     public function __construct(
-        private readonly CheckInServiceInterface $checkInService
+        private readonly CheckInServiceInterface $checkInService,
+        private readonly MemberRepositoryInterface $memberRepository,
+        private readonly MemberAccessCredentialServiceInterface $memberAccessCredentialService,
     ) {}
 
     public function index(Request $request): Response
@@ -69,10 +75,38 @@ class CheckInController extends Controller
         return back()->with('success', 'Member checked in successfully.');
     }
 
-    public function checkOut(CheckIn $checkIn): RedirectResponse
+    public function checkout(CheckIn $checkIn): RedirectResponse
     {
         $this->checkInService->checkOut($checkIn);
 
         return back()->with('success', 'Member checked out successfully.');
+    }
+
+    public function credentialCheckIn(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'credential' => ['required', 'string', 'max:512'],
+            'type' => ['required', Rule::enum(AccessCredentialType::class)],
+        ]);
+
+        $this->memberAccessCredentialService->checkInWithCredential(
+            trim($validated['credential']),
+            AccessCredentialType::from($validated['type'])
+        );
+
+        return back()->with('success', 'Member checked in successfully.');
+    }
+
+    public function searchMembers(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->query('search'));
+
+        if (strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        return response()->json(
+            $this->memberRepository->searchForCheckIn($search)
+        );
     }
 }

@@ -49,13 +49,13 @@ class CheckInTest extends TestCase
 
     public function test_check_in_routes_require_staff_or_admin_role(): void
     {
-        $this->get(route('check-ins.index'))->assertRedirect(route('login'));
+        $this->get(route('checkins.index'))->assertRedirect(route('login'));
 
         $this->actingAsRole('Member');
-        $this->get(route('check-ins.index'))->assertForbidden();
+        $this->get(route('checkins.index'))->assertForbidden();
 
         $this->actingAsRole('Staff');
-        $this->get(route('check-ins.index'))
+        $this->get(route('checkins.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('CheckIns/Index')
@@ -67,7 +67,7 @@ class CheckInTest extends TestCase
         $this->actingAsRole('Staff');
         [$member, $membership] = $this->memberWithMembership();
 
-        $this->post(route('check-ins.store'), [
+        $this->post(route('checkins.store'), [
             'member_id' => $member->id,
             'method' => 'qr',
             'device_id' => 'front-desk-1',
@@ -82,12 +82,38 @@ class CheckInTest extends TestCase
         $this->assertNull($checkIn->check_out_at);
     }
 
+    public function test_member_search_returns_only_memberships_valid_today(): void
+    {
+        $this->actingAsRole('Staff');
+        [$member, $validMembership] = $this->memberWithMembership();
+        $member->update([
+            'first_name' => 'Samir',
+            'last_name' => 'Lama',
+        ]);
+        MemberMembership::create([
+            'member_id' => $member->id,
+            'membership_plan_id' => $validMembership->membership_plan_id,
+            'start_date' => today()->addDay(),
+            'end_date' => today()->addMonth(),
+            'status' => 'active',
+            'price' => 2500,
+            'final_price' => 2500,
+        ]);
+
+        $this->getJson(route('checkins.member-search', ['search' => 'Samir Lama']))
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $member->id)
+            ->assertJsonCount(1, '0.memberships')
+            ->assertJsonPath('0.memberships.0.id', $validMembership->id);
+    }
+
     public function test_missing_method_defaults_to_manual(): void
     {
         $this->actingAsRole('Staff');
         [$member] = $this->memberWithMembership();
 
-        $this->post(route('check-ins.store'), [
+        $this->post(route('checkins.store'), [
             'member_id' => $member->id,
         ])->assertSessionHasNoErrors();
 
@@ -98,7 +124,9 @@ class CheckInTest extends TestCase
     {
         $service = app(CheckInService::class);
         [$inactiveMember] = $this->memberWithMembership(memberStatus: 'inactive');
+        [$suspendedMember] = $this->memberWithMembership(memberStatus: 'suspended');
         [$pausedMember] = $this->memberWithMembership(membershipStatus: 'paused');
+        $memberWithoutMembership = Member::factory()->create(['status' => 'active']);
         [$futureMember] = $this->memberWithMembership(
             startDate: today()->addDay()->toDateString(),
             endDate: today()->addMonth()->toDateString(),
@@ -108,7 +136,14 @@ class CheckInTest extends TestCase
             endDate: today()->subDay()->toDateString(),
         );
 
-        foreach ([$inactiveMember, $pausedMember, $futureMember, $endedMember] as $member) {
+        foreach ([
+            $inactiveMember,
+            $suspendedMember,
+            $pausedMember,
+            $memberWithoutMembership,
+            $futureMember,
+            $endedMember,
+        ] as $member) {
             try {
                 $service->checkIn($member->id);
                 $this->fail('Invalid member or membership should not check in.');
@@ -158,7 +193,7 @@ class CheckInTest extends TestCase
         $this->actingAsRole('Staff');
         [$member] = $this->memberWithMembership();
 
-        $this->post(route('check-ins.store'), [
+        $this->post(route('checkins.store'), [
             'member_id' => $member->id,
             'method' => 'turnstile',
         ])->assertSessionHasErrors('method');
@@ -177,7 +212,7 @@ class CheckInTest extends TestCase
         $closed = $service->checkIn($otherMember->id, CheckInMethod::MANUAL);
         $service->checkOut($closed);
 
-        $this->get(route('check-ins.index', [
+        $this->get(route('checkins.index', [
             'search' => 'samir lama',
             'presence' => 'open',
             'method' => 'rfid',
@@ -200,7 +235,7 @@ class CheckInTest extends TestCase
         $matching = $service->checkIn($matchingMember->id);
         $service->checkIn($otherMember->id);
 
-        $this->get(route('check-ins.index', ['search' => '0']))
+        $this->get(route('checkins.index', ['search' => '0']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('checkIns.data', 1)

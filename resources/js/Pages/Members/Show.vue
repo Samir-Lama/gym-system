@@ -14,6 +14,7 @@ import {
     membershipStatusClasses,
 } from '@/Services/formatters'
 import { computed } from 'vue'
+import { QrCode } from 'lucide-vue-next'
 
 interface MembershipPlan {
     id: number
@@ -152,6 +153,15 @@ const assignMembership = () => {
                         <Link :href="route('members.edit', member.id)">
                             Edit Member
                         </Link>
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="router.post(route('members.qr.issue', member.id))"
+                    >
+                        <QrCode class="mr-2 h-4 w-4" />
+                        Issue QR Card
                     </Button>
                 </div>
             </div>

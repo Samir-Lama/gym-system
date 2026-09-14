@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\EnumController;
 use App\Http\Controllers\CheckInController;
+use App\Http\Controllers\MemberAccessCredentialController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MemberMembershipController;
 use App\Http\Controllers\MembershipPlanController;
@@ -32,11 +32,23 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:Admin|Staff'])->group(function () {
     Route::get('/check-ins', [CheckInController::class, 'index'])
-        ->name('check-ins.index');
+        ->name('checkins.index');
     Route::post('/check-ins', [CheckInController::class, 'store'])
-        ->name('check-ins.store');
-    Route::patch('/check-ins/{checkIn}/checkout', [CheckInController::class, 'checkOut'])
-        ->name('check-ins.checkout');
+        ->name('checkins.store');
+    Route::post('/check-ins/credential', [CheckInController::class, 'credentialCheckIn'])
+        ->name('checkins.credential');
+    Route::get('/check-ins/member-search', [CheckInController::class, 'searchMembers'])
+        ->name('checkins.member-search');
+    Route::patch('/check-ins/{checkIn}/checkout', [CheckInController::class, 'checkout'])
+        ->name('checkins.checkout');
+
+    Route::post('/members/{member}/qr-credential', [MemberAccessCredentialController::class, 'issueQr'])
+        ->name('members.qr.issue')
+        ->block();
+    Route::get('/members/{member}/qr-credential', [MemberAccessCredentialController::class, 'showQr'])
+        ->name('members.qr.show')
+        ->middleware('cache.headers:no_store')
+        ->block();
 
     Route::post('/members/bulk-status', [MemberController::class, 'bulkStatus'])
         ->name('members.bulk-status');
@@ -93,4 +105,4 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
         ->only(['create', 'store', 'edit', 'update', 'destroy']);
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

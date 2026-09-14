@@ -65,4 +65,9 @@ class Member extends Model
     {
         return $this->hasMany(CheckIn::class);
     }
+
+    public function accessCredentials(): HasMany
+    {
+        return $this->hasMany(MemberAccessCredential::class);
+    }
 }

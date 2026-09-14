@@ -4,6 +4,7 @@ namespace App\Contracts\Repositories;
 
 use App\Enums\MemberStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 interface MemberRepositoryInterface extends BaseRepositoryInterface
 {
@@ -18,6 +19,11 @@ interface MemberRepositoryInterface extends BaseRepositoryInterface
     public function existsByMembershipNumber(
         string $membershipNumber
     ): bool;
+
+    public function searchForCheckIn(
+        string $search,
+        int $limit = 10
+    ): Collection;
 
     public function updateStatusByIds(
         array $ids,

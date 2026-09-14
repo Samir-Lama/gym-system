@@ -35,7 +35,7 @@ class CheckInService extends BaseService implements CheckInServiceInterface
 
             if ($member->status !== MemberStatus::ACTIVE) {
                 throw ValidationException::withMessages([
-                    'member_id' => 'Only active members can check in.',
+                    'member_id' => 'This member account is not active.',
                 ]);
             }
 
@@ -79,17 +79,15 @@ class CheckInService extends BaseService implements CheckInServiceInterface
                 ->lockForUpdate()
                 ->findOrFail($checkIn->id);
 
-            if ($checkIn->check_out_at) {
+            if ($checkIn->check_out_at !== null) {
                 throw ValidationException::withMessages([
-                    'check_in' => 'This check-in has already been closed.',
+                    'check_in' => 'This visit has already been checked out.',
                 ]);
             }
 
-            $checkIn->update([
+            return $this->checkInRepository->update($checkIn, [
                 'check_out_at' => now(),
             ]);
-
-            return $checkIn->refresh();
         });
     }
 
