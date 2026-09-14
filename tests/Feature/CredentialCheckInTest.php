@@ -6,6 +6,7 @@ use App\Enums\AccessCredentialType;
 use App\Enums\CheckInMethod;
 use App\Models\CheckIn;
 use App\Models\Member;
+use App\Models\MemberAccessCredential;
 use App\Models\MemberMembership;
 use App\Models\MembershipPlan;
 use App\Services\MemberAccessCredentials\MemberAccessCredentialService;
@@ -65,20 +66,43 @@ class CredentialCheckInTest extends TestCase
         $this->assertNotNull($issued->credential->fresh()->last_used_at);
     }
 
+    public function test_pre_normalization_qr_credential_can_still_check_in(): void
+    {
+        $this->actingAsRole('Staff');
+        $member = $this->eligibleMember();
+        $token = 'LegacyMixedCaseQrToken';
+        MemberAccessCredential::create([
+            'member_id' => $member->id,
+            'type' => AccessCredentialType::QR,
+            'credential_hash' => hash('sha256', $token),
+            'is_active' => true,
+        ]);
+
+        $this->post(route('checkins.credential'), [
+            'credential' => $token,
+            'type' => 'qr',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame($member->id, CheckIn::sole()->member_id);
+    }
+
     public function test_rfid_credential_maps_to_rfid_check_in(): void
     {
         $this->actingAsRole('Staff');
-        $issued = app(MemberAccessCredentialService::class)->issue(
+        $credential = app(MemberAccessCredentialService::class)->issueRfidCredential(
             $this->eligibleMember(),
-            AccessCredentialType::RFID
+            '04A1B2'
         );
 
         $this->post(route('checkins.credential'), [
-            'credential' => $issued->token,
+            'credential' => '04-a1 b2',
             'type' => 'rfid',
         ])->assertSessionHasNoErrors();
 
-        $this->assertSame(CheckInMethod::RFID, CheckIn::sole()->method);
+        $checkIn = CheckIn::sole();
+        $this->assertSame(CheckInMethod::RFID, $checkIn->method);
+        $this->assertSame($credential->member_id, $checkIn->member_id);
+        $this->assertNotNull($credential->fresh()->last_used_at);
     }
 
     public function test_invalid_or_revoked_credential_is_rejected(): void

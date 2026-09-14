@@ -38,7 +38,7 @@ class MemberQrCredentialTest extends TestCase
         $this->assertNotSame($token, $encryptedToken);
         $this->assertDatabaseHas('member_access_credentials', [
             'member_id' => $member->id,
-            'credential_hash' => hash('sha256', $token),
+            'credential_hash' => hash('sha256', strtoupper($token)),
             'type' => 'qr',
             'is_active' => true,
         ]);

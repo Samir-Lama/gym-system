@@ -96,6 +96,10 @@ const credentialForm = useForm({
     type: 'qr',
 })
 
+const rfidInput = ref('')
+const rfidProcessing = ref(false)
+const rfidError = ref('')
+
 const credentialError = computed(() =>
     credentialForm.errors.credential
     || credentialForm.errors.type
@@ -111,6 +115,37 @@ const submitCredential = () => {
     credentialForm.post(route('checkins.credential'), {
         preserveScroll: true,
         onSuccess: () => credentialForm.reset('credential'),
+    })
+}
+
+const submitRfid = () => {
+    const credential = rfidInput.value.trim()
+
+    if (!credential || rfidProcessing.value) {
+        return
+    }
+
+    router.post(route('checkins.credential'), {
+        credential,
+        type: 'rfid',
+    }, {
+        preserveScroll: true,
+        onStart: () => {
+            rfidProcessing.value = true
+            rfidError.value = ''
+        },
+        onSuccess: () => {
+            rfidInput.value = ''
+        },
+        onError: (errors) => {
+            rfidError.value = errors.credential
+                ?? errors.member_id
+                ?? 'Unable to check in with this RFID card.'
+        },
+        onFinish: () => {
+            rfidInput.value = ''
+            rfidProcessing.value = false
+        },
     })
 }
 
@@ -293,11 +328,17 @@ onBeforeUnmount(() => {
 <template>
     <AdminLayout>
         <div class="space-y-6">
-            <div>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Check-ins</h1>
-                <p class="mt-1 text-sm text-slate-500">
-                    Record arrivals and departures while keeping a complete visit history.
-                </p>
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Check-ins</h1>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Record arrivals and departures while keeping a complete visit history.
+                    </p>
+                </div>
+
+                <Button variant="outline" as-child>
+                    <Link :href="route('checkins.display')">Open Entrance Display</Link>
+                </Button>
             </div>
 
             <div class="grid items-start gap-6 xl:grid-cols-[380px_1fr]">
@@ -314,31 +355,47 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <form class="space-y-3 border-b bg-emerald-50/40 p-5" @submit.prevent="submitCredential">
+                    <form class="space-y-3 border-b bg-emerald-50/40 p-5" @submit.prevent="submitRfid">
                         <div class="space-y-1.5">
-                            <label for="credential-scan" class="text-sm font-medium text-slate-700">
-                                Scan Credential
+                            <label for="rfid-scan" class="text-sm font-medium text-slate-700">
+                                Scan RFID Card
                             </label>
-                            <div class="grid grid-cols-[1fr_6rem] gap-2">
-                                <Input
-                                    id="credential-scan"
-                                    v-model="credentialForm.credential"
-                                    autocomplete="off"
-                                    autofocus
-                                    placeholder="Scan QR or card..."
-                                />
-                                <select
-                                    v-model="credentialForm.type"
-                                    aria-label="Credential type"
-                                    class="h-10 rounded-md border border-input bg-white px-2 text-sm"
-                                >
-                                    <option value="qr">QR</option>
-                                    <option value="rfid">RFID</option>
-                                </select>
-                            </div>
+                            <Input
+                                id="rfid-scan"
+                                v-model="rfidInput"
+                                autocomplete="off"
+                                autofocus
+                                :readonly="rfidProcessing"
+                                placeholder="Scan RFID card..."
+                            />
                             <p class="text-xs text-slate-500">
-                                USB scanners can enter the code and submit automatically.
+                                The USB reader will enter the UID and submit it automatically.
                             </p>
+                            <p v-if="rfidError" class="text-sm text-red-600">
+                                {{ rfidError }}
+                            </p>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            class="w-full"
+                            :disabled="rfidProcessing || !rfidInput.trim()"
+                        >
+                            {{ rfidProcessing ? 'Checking in...' : 'Check In with RFID' }}
+                        </Button>
+                    </form>
+
+                    <form class="space-y-3 border-b p-5" @submit.prevent="submitCredential">
+                        <div class="space-y-1.5">
+                            <label for="qr-scan" class="text-sm font-medium text-slate-700">
+                                Scan QR Code
+                            </label>
+                            <Input
+                                id="qr-scan"
+                                v-model="credentialForm.credential"
+                                autocomplete="off"
+                                placeholder="Scan QR code..."
+                            />
                             <p v-if="credentialError" class="text-sm text-red-600">
                                 {{ credentialError }}
                             </p>
@@ -346,10 +403,11 @@ onBeforeUnmount(() => {
 
                         <Button
                             type="submit"
+                            variant="outline"
                             class="w-full"
                             :disabled="credentialForm.processing || !credentialForm.credential.trim()"
                         >
-                            {{ credentialForm.processing ? 'Checking in...' : 'Scan Credential' }}
+                            {{ credentialForm.processing ? 'Checking in...' : 'Check In with QR' }}
                         </Button>
                     </form>
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\MemberAccessCredentialController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MemberMembershipController;
 use App\Http\Controllers\MembershipPlanController;
+use App\Http\Controllers\MobileCheckInController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
@@ -41,6 +42,12 @@ Route::middleware(['auth', 'role:Admin|Staff'])->group(function () {
         ->name('checkins.member-search');
     Route::patch('/check-ins/{checkIn}/checkout', [CheckInController::class, 'checkout'])
         ->name('checkins.checkout');
+    Route::get('/check-ins/display', [MobileCheckInController::class, 'display'])
+        ->name('checkins.display')
+        ->middleware('cache.headers:no_store');
+    Route::get('/check-ins/challenge', [MobileCheckInController::class, 'challenge'])
+        ->name('checkins.challenge')
+        ->middleware('cache.headers:no_store');
 
     Route::post('/members/{member}/qr-credential', [MemberAccessCredentialController::class, 'issueQr'])
         ->name('members.qr.issue')
@@ -49,6 +56,11 @@ Route::middleware(['auth', 'role:Admin|Staff'])->group(function () {
         ->name('members.qr.show')
         ->middleware('cache.headers:no_store')
         ->block();
+    Route::post('/members/{member}/rfid-credential', [MemberAccessCredentialController::class, 'registerRfid'])
+        ->name('members.rfid.register')
+        ->block();
+    Route::patch('/members/{member}/account', [MemberController::class, 'linkAccount'])
+        ->name('members.account.link');
 
     Route::post('/members/bulk-status', [MemberController::class, 'bulkStatus'])
         ->name('members.bulk-status');
@@ -93,6 +105,16 @@ Route::middleware(['auth', 'role:Admin|Staff'])->group(function () {
 
     Route::post('/payments', [PaymentController::class, 'store'])
         ->name('payments.store');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/check-in/mobile/success', [MobileCheckInController::class, 'success'])
+        ->name('mobile-checkin.success');
+    Route::get('/check-in/mobile/{token}', [MobileCheckInController::class, 'show'])
+        ->name('mobile-checkin.show')
+        ->middleware('cache.headers:no_store');
+    Route::post('/check-in/mobile', [MobileCheckInController::class, 'store'])
+        ->name('mobile-checkin.store');
 });
 
 Route::middleware(['auth', 'role:Admin'])->group(function () {

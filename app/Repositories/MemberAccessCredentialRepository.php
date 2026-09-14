@@ -37,4 +37,15 @@ class MemberAccessCredentialRepository extends BaseRepository
             ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
             ->first();
     }
+
+    public function findByHash(
+        string $credentialHash,
+        bool $lockForUpdate = false,
+    ): ?MemberAccessCredential {
+        return $this->model
+            ->newQuery()
+            ->where('credential_hash', $credentialHash)
+            ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
+            ->first();
+    }
 }

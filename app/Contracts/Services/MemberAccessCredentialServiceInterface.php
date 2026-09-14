@@ -16,6 +16,16 @@ interface MemberAccessCredentialServiceInterface
         ?string $label = null
     ): IssuedMemberAccessCredentialData;
 
+    public function issueRfidCredential(
+        Member $member,
+        string $cardUid
+    ): MemberAccessCredential;
+
+    public function findByToken(
+        string $token,
+        AccessCredentialType $type
+    ): ?MemberAccessCredential;
+
     public function resolve(
         string $token,
         ?AccessCredentialType $expectedType = null

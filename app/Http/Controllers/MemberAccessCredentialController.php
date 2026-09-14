@@ -36,6 +36,20 @@ class MemberAccessCredentialController extends Controller
         return redirect()->route('members.qr.show', $member);
     }
 
+    public function registerRfid(Request $request, Member $member): RedirectResponse
+    {
+        $validated = $request->validate([
+            'credential' => ['required', 'string', 'max:512'],
+        ]);
+
+        $this->memberAccessCredentialService->issueRfidCredential(
+            $member,
+            $validated['credential']
+        );
+
+        return back()->with('success', 'RFID card registered successfully.');
+    }
+
     public function showQr(Request $request, Member $member): Response|RedirectResponse
     {
         if (

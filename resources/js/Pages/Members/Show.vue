@@ -13,8 +13,8 @@ import {
     capitalize,
     membershipStatusClasses,
 } from '@/Services/formatters'
-import { computed } from 'vue'
-import { QrCode } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { CreditCard, QrCode } from 'lucide-vue-next'
 
 interface MembershipPlan {
     id: number
@@ -39,6 +39,7 @@ interface MemberMembership {
 
 interface Member {
     id: number
+    user_id: number | null
     membership_number: string
 
     first_name: string
@@ -65,6 +66,12 @@ interface Member {
     notes: string | null
 }
 
+interface MemberAccount {
+    id: number
+    name: string
+    email: string
+}
+
 interface PaginationLink {
     url: string | null
     label: string
@@ -84,6 +91,7 @@ const props = defineProps<{
     plans: MembershipPlan[]
     memberships: MembershipPagination
     currentMembership: MemberMembership | null
+    memberAccounts: MemberAccount[]
 }>()
 
 const membershipForm = useForm({
@@ -95,8 +103,46 @@ const membershipForm = useForm({
     discount_reason: '',
 })
 
+const accountForm = useForm({
+    user_id: props.member.user_id?.toString() ?? '',
+})
+
 const selectedPlan = computed(() => props.plans.find(plan => plan.id === Number(membershipForm.membership_plan_id)))
 const finalPrice = computed(() => Math.max(0, Number(selectedPlan.value?.price ?? 0) - Number(membershipForm.discount_amount || 0)))
+const rfidUid = ref('')
+const rfidProcessing = ref(false)
+const rfidError = ref('')
+
+const registerRfid = () => {
+    const credential = rfidUid.value.trim()
+
+    if (!credential || rfidProcessing.value) {
+        return
+    }
+
+    router.post(route('members.rfid.register', props.member.id), { credential }, {
+        preserveScroll: true,
+        onStart: () => {
+            rfidProcessing.value = true
+            rfidError.value = ''
+        },
+        onSuccess: () => {
+            rfidUid.value = ''
+        },
+        onError: (errors) => {
+            rfidError.value = errors.credential ?? 'Unable to register this RFID card.'
+        },
+        onFinish: () => {
+            rfidProcessing.value = false
+        },
+    })
+}
+
+const linkAccount = () => {
+    accountForm.patch(route('members.account.link', props.member.id), {
+        preserveScroll: true,
+    })
+}
 
 const assignMembership = () => {
     membershipForm.post(
@@ -205,6 +251,72 @@ const assignMembership = () => {
                         {{ capitalize(currentMembership.status) }}
                     </span>
                 </div>
+            </div>
+
+            <div class="rounded-xl border bg-white shadow-sm">
+                <div class="border-b px-6 py-4">
+                    <h2 class="font-semibold text-slate-900">Mobile Account</h2>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Link a Member user account to enable mobile entrance check-in.
+                    </p>
+                </div>
+
+                <form class="flex flex-col gap-3 p-6 sm:flex-row sm:items-start" @submit.prevent="linkAccount">
+                    <div class="flex-1">
+                        <select
+                            v-model="accountForm.user_id"
+                            class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                            <option value="">Select a member account</option>
+                            <option v-for="account in memberAccounts" :key="account.id" :value="account.id.toString()">
+                                {{ account.name }} · {{ account.email }}
+                            </option>
+                        </select>
+                        <p v-if="accountForm.errors.user_id" class="mt-1 text-sm text-red-600">
+                            {{ accountForm.errors.user_id }}
+                        </p>
+                    </div>
+                    <Button
+                        type="submit"
+                        :disabled="accountForm.processing || (!accountForm.user_id && !member.user_id)"
+                    >
+                        {{ accountForm.processing
+                            ? 'Saving...'
+                            : accountForm.user_id
+                                ? 'Link Account'
+                                : 'Unlink Account' }}
+                    </Button>
+                </form>
+            </div>
+
+            <div class="rounded-xl border bg-white shadow-sm">
+                <div class="border-b px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <CreditCard class="h-5 w-5 text-slate-600" />
+                        <div>
+                            <h2 class="font-semibold text-slate-900">RFID Card</h2>
+                            <p class="text-sm text-slate-500">
+                                Scan a card to replace this member's active RFID credential.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="flex flex-col gap-3 p-6 sm:flex-row sm:items-start" @submit.prevent="registerRfid">
+                    <div class="flex-1">
+                        <Input
+                            v-model="rfidUid"
+                            aria-label="RFID card UID"
+                            autocomplete="off"
+                            :disabled="rfidProcessing"
+                            placeholder="Scan RFID card..."
+                        />
+                        <p v-if="rfidError" class="mt-1 text-sm text-red-600">{{ rfidError }}</p>
+                    </div>
+                    <Button type="submit" :disabled="rfidProcessing || !rfidUid.trim()">
+                        {{ rfidProcessing ? 'Registering...' : 'Register RFID' }}
+                    </Button>
+                </form>
             </div>
 
             <!-- Personal Information -->

@@ -12,9 +12,13 @@ use App\Http\Requests\Members\StoreMemberRequest;
 use App\Http\Requests\Members\UpdateMemberRequest;
 use App\Models\Member;
 use App\Models\MembershipPlan;
+use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,13 +48,13 @@ class MemberController extends Controller
 
         $sort = $request->string('sort')->value();
 
-        if (!in_array($sort, $allowedSorts, true)) {
+        if (! in_array($sort, $allowedSorts, true)) {
             $sort = 'created_at';
         }
 
         $direction = $request->string('direction')->value();
 
-        if (!in_array($direction, ['asc', 'desc'], true)) {
+        if (! in_array($direction, ['asc', 'desc'], true)) {
             $direction = 'desc';
         }
 
@@ -117,18 +121,29 @@ class MemberController extends Controller
             ->latest()
             ->first();
 
+        $linkedUserIds = Member::query()
+            ->whereNotNull('user_id')
+            ->whereKeyNot($member->id)
+            ->pluck('user_id');
+        $memberAccounts = User::query()
+            ->whereHas('roles', fn ($query) => $query->where('name', 'Member'))
+            ->whereNotIn('id', $linkedUserIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
         return Inertia::render('Members/Show', [
             'member' => $member,
             'plans' => $plans,
             'memberships' => $memberships,
             'currentMembership' => $currentMembership,
+            'memberAccounts' => $memberAccounts,
         ]);
     }
 
     public function edit(Member $member): Response
     {
         return Inertia::render('Members/Edit', [
-            'member' => $member
+            'member' => $member,
         ]);
     }
 
@@ -189,6 +204,50 @@ class MemberController extends Controller
         );
     }
 
+    public function linkAccount(Request $request, Member $member): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => ['present', 'nullable', 'integer', 'exists:users,id'],
+        ]);
+        $userId = $validated['user_id'] ?? null;
+
+        if (! $userId) {
+            $member->update(['user_id' => null]);
+
+            return back()->with('success', 'Member account unlinked successfully.');
+        }
+
+        try {
+            DB::transaction(function () use ($member, $userId) {
+                $member = Member::query()->lockForUpdate()->findOrFail($member->id);
+                $user = User::query()->lockForUpdate()->findOrFail($userId);
+
+                if (! $user->hasRole('Member')) {
+                    throw ValidationException::withMessages([
+                        'user_id' => 'The selected user must have the Member role.',
+                    ]);
+                }
+
+                if (Member::query()
+                    ->where('user_id', $user->id)
+                    ->whereKeyNot($member->id)
+                    ->exists()) {
+                    throw ValidationException::withMessages([
+                        'user_id' => 'This user is already linked to another member.',
+                    ]);
+                }
+
+                $member->update(['user_id' => $user->id]);
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages([
+                'user_id' => 'This user is already linked to another member.',
+            ]);
+        }
+
+        return back()->with('success', 'Member account linked successfully.');
+    }
+
     public function bulkDelete(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -209,7 +268,7 @@ class MemberController extends Controller
 
         return back()->with(
             'success',
-            "{$count} member" . ($count === 1 ? '' : 's') . " deleted successfully."
+            "{$count} member".($count === 1 ? '' : 's').' deleted successfully.'
         );
     }
 }

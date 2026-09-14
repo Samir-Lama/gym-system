@@ -12,6 +12,7 @@ use App\Models\Member;
 use App\Models\MemberAccessCredential;
 use App\Repositories\MemberAccessCredentialRepository;
 use App\Services\BaseService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -42,7 +43,7 @@ class MemberAccessCredentialService extends BaseService implements MemberAccessC
             $credential = $this->memberAccessCredentialRepository->create([
                 'member_id' => $member->id,
                 'type' => $type,
-                'credential_hash' => hash('sha256', $token),
+                'credential_hash' => hash('sha256', $this->normalizeCredential($token)),
                 'label' => $label,
                 'is_active' => true,
             ]);
@@ -54,16 +55,66 @@ class MemberAccessCredentialService extends BaseService implements MemberAccessC
         });
     }
 
+    public function issueRfidCredential(
+        Member $member,
+        string $cardUid
+    ): MemberAccessCredential {
+        $normalizedUid = $this->normalizeCredential($cardUid);
+
+        if ($normalizedUid === '') {
+            throw ValidationException::withMessages([
+                'credential' => 'Enter a valid RFID card UID.',
+            ]);
+        }
+
+        $credentialHash = hash('sha256', $normalizedUid);
+
+        try {
+            return DB::transaction(function () use ($member, $credentialHash) {
+                $member = Member::query()
+                    ->lockForUpdate()
+                    ->findOrFail($member->id);
+
+                if ($this->memberAccessCredentialRepository->findByHash($credentialHash, true)) {
+                    throw ValidationException::withMessages([
+                        'credential' => 'This RFID card is already registered.',
+                    ]);
+                }
+
+                $this->memberAccessCredentialRepository->deactivateActiveForMemberType(
+                    $member->id,
+                    AccessCredentialType::RFID
+                );
+
+                return $this->memberAccessCredentialRepository->create([
+                    'member_id' => $member->id,
+                    'type' => AccessCredentialType::RFID,
+                    'credential_hash' => $credentialHash,
+                    'label' => 'RFID Card',
+                    'is_active' => true,
+                ]);
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages([
+                'credential' => 'This RFID card is already registered.',
+            ]);
+        }
+    }
+
+    public function findByToken(
+        string $token,
+        AccessCredentialType $type
+    ): ?MemberAccessCredential {
+        return $this->findActiveCredential($token, $type);
+    }
+
     public function resolve(
         string $token,
         ?AccessCredentialType $expectedType = null
     ): MemberAccessCredential {
-        $credential = $token === ''
-            ? null
-            : $this->memberAccessCredentialRepository->findActiveByHash(
-                hash('sha256', $token),
-                $expectedType
-            );
+        $credential = $expectedType
+            ? $this->findByToken($token, $expectedType)
+            : $this->findByAnyToken($token);
 
         if (! $credential) {
             throw ValidationException::withMessages([
@@ -85,11 +136,7 @@ class MemberAccessCredentialService extends BaseService implements MemberAccessC
                 ->lockForUpdate()
                 ->findOrFail($credential->member_id);
 
-            $credential = $this->memberAccessCredentialRepository->findActiveByHash(
-                hash('sha256', $token),
-                $type,
-                lockForUpdate: true,
-            );
+            $credential = $this->findActiveCredential($token, $type, true);
 
             if (! $credential) {
                 throw ValidationException::withMessages([
@@ -145,5 +192,67 @@ class MemberAccessCredentialService extends BaseService implements MemberAccessC
                 'is_active' => false,
             ]);
         });
+    }
+
+    private function findByAnyToken(string $token): ?MemberAccessCredential
+    {
+        $normalizedToken = $this->normalizeCredential($token);
+
+        if ($normalizedToken === '') {
+            return null;
+        }
+
+        $credential = $this->memberAccessCredentialRepository->findActiveByHash(
+            hash('sha256', $normalizedToken)
+        );
+
+        if ($credential || $normalizedToken === trim($token)) {
+            return $credential;
+        }
+
+        return $this->memberAccessCredentialRepository->findActiveByHash(
+            hash('sha256', trim($token))
+        );
+    }
+
+    private function findActiveCredential(
+        string $token,
+        AccessCredentialType $type,
+        bool $lockForUpdate = false,
+    ): ?MemberAccessCredential {
+        $normalizedToken = $this->normalizeCredential($token);
+
+        if ($normalizedToken === '') {
+            return null;
+        }
+
+        $credential = $this->memberAccessCredentialRepository->findActiveByHash(
+            hash('sha256', $normalizedToken),
+            $type,
+            $lockForUpdate,
+        );
+
+        if (
+            $credential
+            || $type !== AccessCredentialType::QR
+            || $normalizedToken === trim($token)
+        ) {
+            return $credential;
+        }
+
+        return $this->memberAccessCredentialRepository->findActiveByHash(
+            hash('sha256', trim($token)),
+            $type,
+            $lockForUpdate,
+        );
+    }
+
+    private function normalizeCredential(string $credential): string
+    {
+        return strtoupper((string) preg_replace(
+            '/[^a-zA-Z0-9]/',
+            '',
+            trim($credential)
+        ));
     }
 }

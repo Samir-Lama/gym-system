@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Contracts\Services\MemberAccessCredentialServiceInterface;
 use App\Enums\AccessCredentialType;
 use App\Models\Member;
+use App\Models\MemberAccessCredential;
 use App\Services\MemberAccessCredentials\MemberAccessCredentialService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -34,7 +35,10 @@ class MemberAccessCredentialTest extends TestCase
         );
 
         $this->assertSame(64, strlen($issued->token));
-        $this->assertSame(hash('sha256', $issued->token), $issued->credential->credential_hash);
+        $this->assertSame(
+            hash('sha256', strtoupper($issued->token)),
+            $issued->credential->credential_hash
+        );
         $this->assertNotSame($issued->token, $issued->credential->credential_hash);
         $this->assertSame(AccessCredentialType::QR, $issued->credential->type);
         $this->assertSame('Membership card', $issued->credential->label);
@@ -60,6 +64,22 @@ class MemberAccessCredentialTest extends TestCase
         $this->service->resolve($issued->token, AccessCredentialType::RFID);
     }
 
+    public function test_pre_normalization_qr_token_can_still_be_resolved(): void
+    {
+        $token = 'LegacyMixedCaseQrToken';
+        $credential = MemberAccessCredential::create([
+            'member_id' => Member::factory()->create()->id,
+            'type' => AccessCredentialType::QR,
+            'credential_hash' => hash('sha256', $token),
+            'is_active' => true,
+        ]);
+
+        $this->assertTrue(
+            $this->service->findByToken($token, AccessCredentialType::QR)
+                ->is($credential)
+        );
+    }
+
     public function test_issuing_a_new_credential_rotates_only_the_same_type(): void
     {
         $member = Member::factory()->create();
@@ -81,6 +101,63 @@ class MemberAccessCredentialTest extends TestCase
         $this->assertTrue(
             $this->service->resolve($newQr->token, AccessCredentialType::QR)
                 ->is($newQr->credential)
+        );
+    }
+
+    public function test_rfid_uid_is_normalized_for_issuance_and_lookup(): void
+    {
+        $member = Member::factory()->create();
+
+        $credential = $this->service->issueRfidCredential($member, ' 04-a1 b2 ');
+
+        $this->assertSame(
+            hash('sha256', '04A1B2'),
+            $credential->credential_hash
+        );
+        $this->assertSame(AccessCredentialType::RFID, $credential->type);
+        $this->assertTrue($credential->is_active);
+        $this->assertTrue(
+            $this->service->findByToken('04 A1-B2', AccessCredentialType::RFID)
+                ->is($credential)
+        );
+    }
+
+    public function test_registering_rfid_rotates_the_members_card(): void
+    {
+        $member = Member::factory()->create();
+        $first = $this->service->issueRfidCredential($member, '04A1B2');
+        $second = $this->service->issueRfidCredential($member, '05C3D4');
+
+        $this->assertFalse($first->fresh()->is_active);
+        $this->assertTrue($second->fresh()->is_active);
+    }
+
+    public function test_duplicate_rfid_card_is_rejected_even_when_inactive(): void
+    {
+        $credential = $this->service->issueRfidCredential(
+            Member::factory()->create(),
+            '04A1B2'
+        );
+        $this->service->revoke($credential);
+
+        try {
+            $this->service->issueRfidCredential(
+                Member::factory()->create(),
+                '04-A1-B2'
+            );
+            $this->fail('A duplicate RFID card should not be registered.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('credential', $exception->errors());
+        }
+    }
+
+    public function test_rfid_uid_must_contain_alphanumeric_characters(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->service->issueRfidCredential(
+            Member::factory()->create(),
+            ' -- '
         );
     }
 
