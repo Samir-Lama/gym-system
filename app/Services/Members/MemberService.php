@@ -95,7 +95,7 @@ class MemberService implements MemberServiceInterface
         string $sort = 'created_at',
         string $direction = 'desc',
     ): LengthAwarePaginator {
-        return $this->memberRepository->paginate(
+        return $this->memberRepository->paginateMembers(
             $perPage,
             $search,
             $status,
@@ -116,7 +116,8 @@ class MemberService implements MemberServiceInterface
         return $this->memberRepository->updateStatusByIds($ids, $status);
     }
 
-    public function bulkDelete(array $ids): int {
+    public function bulkDelete(array $ids): int
+    {
         return $this->memberRepository->deleteByIds($ids);
     }
 }

@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\EnumController;
+use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\MemberMembershipController;
+use App\Http\Controllers\MembershipPlanController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -24,11 +28,69 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(['auth', 'role:Admin|Staff'])->group(function () {
+    Route::get('/check-ins', [CheckInController::class, 'index'])
+        ->name('check-ins.index');
+    Route::post('/check-ins', [CheckInController::class, 'store'])
+        ->name('check-ins.store');
+    Route::patch('/check-ins/{checkIn}/checkout', [CheckInController::class, 'checkOut'])
+        ->name('check-ins.checkout');
+
     Route::post('/members/bulk-status', [MemberController::class, 'bulkStatus'])
-    ->name('members.bulk-status');
+        ->name('members.bulk-status');
+    Route::resource('members', MemberController::class)->except('destroy');
+
+    Route::resource('membership-plans', MembershipPlanController::class)
+        ->only(['index', 'show']);
+
+    Route::post(
+        '/member-memberships',
+        [MemberMembershipController::class, 'store']
+    )->name('member-memberships.store');
+
+    Route::patch(
+        '/member-memberships/{memberMembership}/pause',
+        [MemberMembershipController::class, 'pause']
+    )->name('member-memberships.pause');
+
+    Route::patch(
+        '/member-memberships/{memberMembership}/cancel',
+        [MemberMembershipController::class, 'cancel']
+    )->name('member-memberships.cancel');
+
+    Route::post(
+        '/member-memberships/{memberMembership}/renew',
+        [MemberMembershipController::class, 'renew']
+    )->name('member-memberships.renew');
+
+    Route::patch(
+        '/member-memberships/{memberMembership}/resume',
+        [MemberMembershipController::class, 'resume']
+    )->name('member-memberships.resume');
+
+    Route::get('/billing', [PaymentController::class, 'index'])
+        ->name('billing.index');
+
+    Route::get('/api/members/search', [PaymentController::class, 'searchMembers'])
+        ->name('members.search');
+
+    Route::get('/payments/{payment}', [PaymentController::class, 'show'])
+        ->name('payments.show');
+
+    Route::post('/payments', [PaymentController::class, 'store'])
+        ->name('payments.store');
+});
+
+Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::delete('/members/bulk-delete', [MemberController::class, 'bulkDelete'])
-    ->name('members.bulk-delete');
-    Route::resource('members', MemberController::class);
+        ->name('members.bulk-delete');
+    Route::delete('/members/{member}', [MemberController::class, 'destroy'])
+        ->name('members.destroy');
+
+    Route::resource('membership-plans', MembershipPlanController::class)
+        ->only(['create', 'store', 'edit', 'update', 'destroy']);
 });
 
 require __DIR__ . '/auth.php';

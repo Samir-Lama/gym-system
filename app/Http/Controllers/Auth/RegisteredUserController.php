@@ -13,6 +13,7 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -37,11 +38,14 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $memberRole = Role::findOrCreate('Member');
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
+
+        $user->assignRole($memberRole);
 
         event(new Registered($user));
 

@@ -4,12 +4,14 @@ namespace App\Models;
 
 use App\Enums\Gender;
 use App\Enums\MemberStatus;
+use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Member extends Model
 {
-    /** @use HasFactory<\Database\Factories\MemberFactory> */
+    /** @use HasFactory<MemberFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -48,4 +50,19 @@ class Member extends Model
         'gender' => Gender::class,
         'status' => MemberStatus::class,
     ];
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(MemberMembership::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function checkIns(): HasMany
+    {
+        return $this->hasMany(CheckIn::class);
+    }
 }

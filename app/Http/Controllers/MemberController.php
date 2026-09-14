@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Contracts\Services\MemberServiceInterface;
 use App\DTOs\Members\CreateMemberData;
 use App\DTOs\Members\UpdateMemberData;
+use App\Enums\MembershipPlanStatus;
+use App\Enums\MembershipStatus;
 use App\Enums\MemberStatus;
 use App\Http\Requests\Members\StoreMemberRequest;
 use App\Http\Requests\Members\UpdateMemberRequest;
 use App\Models\Member;
+use App\Models\MembershipPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -87,13 +90,38 @@ class MemberController extends Controller
 
     public function show(Member $member): Response
     {
+        $plans = MembershipPlan::query()
+            ->where('status', MembershipPlanStatus::ACTIVE)
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'price',
+                'duration_days',
+            ]);
+
+        $memberships = $member
+            ->memberships()
+            ->with('plan')
+            ->orderByDesc('created_at')
+            ->paginate(5, ['*'], 'membership_page')
+            ->withQueryString();
+
+        $currentMembership = $member
+            ->memberships()
+            ->with('plan')
+            ->whereIn('status', [
+                MembershipStatus::ACTIVE,
+                MembershipStatus::PAUSED,
+            ])
+            ->latest()
+            ->first();
+
         return Inertia::render('Members/Show', [
-            'member' => [
-                ...$member->toArray(),
-                'status' => $member->status?->value,
-                'status_label' => $member->status?->label(),
-                'status_color' => $member->status?->color(),
-            ]
+            'member' => $member,
+            'plans' => $plans,
+            'memberships' => $memberships,
+            'currentMembership' => $currentMembership,
         ]);
     }
 

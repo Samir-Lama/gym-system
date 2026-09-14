@@ -3,9 +3,19 @@
 namespace App\Providers;
 
 use App\Contracts\Repositories\MemberRepositoryInterface;
+use App\Contracts\Repositories\MembershipPlanRepositoryInterface;
+use App\Contracts\Services\CheckInServiceInterface;
+use App\Contracts\Services\MemberMembershipServiceInterface;
 use App\Contracts\Services\MemberServiceInterface;
+use App\Contracts\Services\MembershipPlanServiceInterface;
+use App\Contracts\Services\PaymentServiceInterface;
 use App\Repositories\MemberRepository;
+use App\Repositories\MembershipPlanRepository;
+use App\Services\CheckIns\CheckInService;
+use App\Services\MemberMemberships\MemberMembershipService;
 use App\Services\Members\MemberService;
+use App\Services\MembershipPlans\MembershipPlanService;
+use App\Services\Payments\PaymentService;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -17,6 +27,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(
+            CheckInServiceInterface::class,
+            CheckInService::class
+        );
+
+        $this->app->bind(
             MemberRepositoryInterface::class,
             MemberRepository::class,
         );
@@ -24,6 +39,26 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             MemberServiceInterface::class,
             MemberService::class,
+        );
+
+        $this->app->bind(
+            MembershipPlanRepositoryInterface::class,
+            MembershipPlanRepository::class
+        );
+
+        $this->app->bind(
+            MembershipPlanServiceInterface::class,
+            MembershipPlanService::class
+        );
+
+        $this->app->bind(
+            MemberMembershipServiceInterface::class,
+            MemberMembershipService::class
+        );
+
+        $this->app->bind(
+            PaymentServiceInterface::class,
+            PaymentService::class
         );
     }
 

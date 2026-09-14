@@ -59,3 +59,25 @@ export function statusClasses(
 
     return classes[status ?? ''] ?? 'bg-gray-100 text-gray-700'
 }
+
+export function capitalize(value: string | null | undefined): string {
+    if (!value) {
+        return 'Not provided'
+    }
+
+    return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+export function membershipStatusClasses(
+    status: string | null | undefined
+): string {
+    const classes: Record<string, string> = {
+        active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        paused: 'bg-amber-50 text-amber-700 border-amber-200',
+        expired: 'bg-slate-100 text-slate-600 border-slate-200',
+        cancelled: 'bg-red-50 text-red-700 border-red-200',
+    }
+
+    return classes[status ?? '']
+        ?? 'bg-slate-100 text-slate-600 border-slate-200'
+}

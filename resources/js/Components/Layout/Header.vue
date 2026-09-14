@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { Bell } from "lucide-vue-next";
-import { usePage } from "@inertiajs/vue3";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/Components/ui/dropdown-menu'
+import { Link, router, usePage } from '@inertiajs/vue3'
+import { Bell, ChevronDown, LogOut, UserRound } from 'lucide-vue-next'
 
-const page = usePage();
+const page = usePage()
+const user = page.props.auth.user
 
-const user = page.props.auth.user;
+const logout = () => {
+    router.post(route('logout'))
+}
 </script>
 
 <template>
@@ -24,17 +34,53 @@ const user = page.props.auth.user;
                 <Bell class="h-5 w-5" />
             </button>
 
-            <div class="flex items-center gap-2">
-                <div
-                    class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200"
-                >
-                    {{ user.name.charAt(0).toUpperCase() }}
-                </div>
+            <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                    <button
+                        type="button"
+                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-slate-100"
+                    >
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 font-medium text-slate-700"
+                        >
+                            {{ user.name.charAt(0).toUpperCase() }}
+                        </div>
 
-                <span class="font-medium">
-                    {{ user.name }}
-                </span>
-            </div>
+                        <div class="hidden text-right sm:block">
+                            <p class="text-sm font-medium text-slate-900">
+                                {{ user.name }}
+                            </p>
+                            <p class="text-xs text-slate-500">
+                                {{ user.email }}
+                            </p>
+                        </div>
+
+                        <ChevronDown class="h-4 w-4 text-slate-500" />
+                    </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" class="w-52">
+                    <DropdownMenuItem as-child>
+                        <Link
+                            :href="route('profile.edit')"
+                            class="cursor-pointer"
+                        >
+                            <UserRound class="mr-2 h-4 w-4" />
+                            Profile
+                        </Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                        class="cursor-pointer text-red-600 focus:text-red-600"
+                        @click="logout"
+                    >
+                        <LogOut class="mr-2 h-4 w-4" />
+                        Logout
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     </header>
 </template>
